@@ -1,0 +1,21 @@
+---
+dataset_path: # make sure the last dir contains all covers, and the others are stegos
+  # - data/bb_hugo_0.4
+  - data/bb_suniward_0.4
+  - data/cover
+
+save_dir: experiment/1
+log_dir: experiment/1
+log_filename: 1.log
+seed: 2021
+early_stopping: false
+batch_size: 32
+weight_decay: !!float 5e-4
+lr: 0.005
+momentum: 0.9
+max_epoch: 100
+# milestones: [50, 100, 150]
+step_size: 40
+gamma: 0.2
+resume: false
+...
