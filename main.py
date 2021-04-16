@@ -19,6 +19,3 @@ trainer = pl.Trainer(
 )
 trainer.fit(model, train_loader, test_loader)
 # %%
-model
-# %%
-

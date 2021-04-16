@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from src.utils import ABS, TLU, SRM, SPP
-from icecream import ic
 
 __all__ = ['ZhuNet']
 
