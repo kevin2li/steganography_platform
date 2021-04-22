@@ -46,8 +46,7 @@ train_loader, test_loader = getDataLoader(args)
 
 # %%
 trainer = Trainer(model, loss_fn, optimizer, log_writer, acc_metric, lr_scheduler, **args)
-# trainer.print_config(input_size=(None, 1, 256, 256)) # (40, 1024, 1, 30) for cnn, (32, 30, 1024) for rnn
-trainer.print_config(input_size=(None, 3, 32, 32)) # (40, 1024, 1, 30) for cnn, (32, 30, 1024) for rnn
+trainer.print_config(input_size=(None, 1, 256, 256)) # (40, 1024, 1, 30) for cnn, (32, 30, 1024) for rnn
 trainer.fit(train_loader, test_loader)
 
 # %%
