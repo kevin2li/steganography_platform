@@ -1,15 +1,16 @@
 import os
 import sys
+from pathlib import Path
 from pprint import pprint
 
 import torch
 import torch.nn as nn
-
 from loguru import logger
 from tqdm import tqdm
 
 from src.utils import AverageMeter, EarlyStopping
 
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 class Trainer():
     def __init__(
@@ -49,7 +50,12 @@ class Trainer():
 
     def print_config(self, input_size=(40, 1024, 1, 30)):   # (BCHW) for CNN, (B, seq_len, dim_size) for RNN
         self.logger.info('Current experiment configuration:')
-        self.logger.info(pprint(self.args))
+        all_args = self.args
+        all_args['save_dir'] = self.save_dir
+        all_args['resume'] = self.resume
+        all_args['max_epoch'] = self.max_epoch
+        all_args['early_stopping'] = True if self.early_stopping else False
+        self.logger.info(pprint(all_args))
         # self.logger.info('-'*30)
         # self.logger.info('Model info:')
         # self.logger.info(paddle.summary(self.model, input_size))
@@ -67,8 +73,10 @@ class Trainer():
         for step, (data, labels) in progressbar:
             # preprocess
             N, C, H, W = data.shape
-            data = data.reshape(N*C, 1, H, W)
-            labels = labels.reshape(-1)
+            data = data.reshape(N*C, 1, H, W).to(device)
+            labels = labels.reshape(-1).to(device)
+            self.log_writer.add_image('train/image_per_step', data[1].cpu().numpy(), step, dataformats="CHW")
+
             # forward part
             logits = self.model(data)
             loss = self.loss_fn(logits, labels)
@@ -106,8 +114,8 @@ class Trainer():
             for step, (data, labels) in progressbar:
                 # preprocess
                 N, C, H, W = data.shape
-                data = data.reshape(N*C, 1, H, W)
-                labels = labels.reshape(-1)
+                data = data.reshape(N*C, 1, H, W).to(device)
+                labels = labels.reshape(-1).to(device)
                 # forward part
                 logits = self.model(data)
                 loss = self.loss_fn(logits, labels)
@@ -115,10 +123,11 @@ class Trainer():
                 # record part
                 loss_val = loss.item()
                 self.loss_averager.update(loss_val)
-                
-                correct = self.acc_metric.compute(logits, labels)
-                batch_acc = self.acc_metric.update(correct)
-                avg_acc = self.acc_metric.accumulate()
+                self.log_writer.add_scalar('train/loss_per_step', loss_val, self.step)
+
+                batch_acc = self.acc_metric(logits, labels)
+                avg_acc = self.acc_metric.compute()
+                self.log_writer.add_scalar('train/acc_per_step', batch_acc, self.step)
 
                 progressbar.set_postfix({
                     'batch_loss': "{:.4f}".format(loss_val),
@@ -127,7 +136,7 @@ class Trainer():
                 })
 
         logs = {}
-        logs['acc'] = self.acc_metric.accumulate()
+        logs['acc'] = self.acc_metric.compute()
         logs['loss'] = self.loss_averager.avg
         self.loss_averager.reset()
         self.acc_metric.reset()
@@ -166,16 +175,19 @@ class Trainer():
             self.best_epoch = self.epoch
             mid = 'best'
 
-        checkpoint = {
+        kwargs = {
             'epoch': self.epoch,
             'step': self.step,
             'acc': acc,
             'best_epoch': self.best_epoch,
             'best_acc': self.best_acc,
         }
-        torch.save(self.model.state_dict(), os.path.join(self.save_dir, mid, 'checkpoint.ptparams'))
-        torch.save(self.optimizer.state_dict(), os.path.join(self.save_dir, mid, 'checkpoint.ptopt'))
-        torch.save(checkpoint, os.path.join(self.save_dir, mid, 'kwargs.pt'))
+        path = Path(self.save_dir) / mid
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=True)
+        torch.save(self.model.state_dict(), path / 'checkpoint.ptparams')
+        torch.save(self.optimizer.state_dict(), path / 'checkpoint.ptopt')
+        torch.save(kwargs, path / 'kwargs.pt')
         self.logger.info('save checkpoint at {}'.format(os.path.abspath(self.save_dir)))
 
     def load_checkpoint(self, type_='latest'):
@@ -183,11 +195,12 @@ class Trainer():
         Args:
             type_: str, one of in (best, latest)
         """
+        path = Path(self.save_dir) / type_
         self.logger.info('==> Resume training...')
-        self.logger.info('load checkpoint at {}\n'.format(os.path.abspath(os.path.join(self.save_dir, type_))))
-        self.model.load_state_dict(torch.load(os.path.join(self.save_dir, type_, 'checkpoint.ptparams')))
-        self.optimizer.load_state_dict(torch.load(os.path.join(self.save_dir, type_, 'checkpoint.ptopt')))
-        checkpoint = torch.load(os.path.join(self.save_dir, type_, 'kwargs.pt'))
+        self.logger.info('load checkpoint at {}\n'.format(os.path.abspath(str(path))))
+        self.model.load_state_dict(torch.load(path / 'checkpoint.ptparams'))
+        self.optimizer.load_state_dict(torch.load(path / 'checkpoint.ptopt'))
+        checkpoint = torch.load(path / 'kwargs.pt')
 
         self.epoch = checkpoint['epoch'] + 1
         self.step = checkpoint['step'] + 1
@@ -202,8 +215,8 @@ class Trainer():
             for step, (data, labels) in progressbar:
                 # preprocess
                 N, C, H, W = data.shape
-                data = data.reshape(N*C, 1, H, W)
-                labels = labels.reshape(-1)
+                data = data.reshape(N*C, 1, H, W).to(device)
+                labels = labels.reshape(-1).to(device)
                 # forward part
                 logits = self.model(data)
                 loss = self.loss_fn(logits, labels)
@@ -212,9 +225,8 @@ class Trainer():
                 loss_val = loss.numpy().item()
                 self.loss_averager.update(loss_val)
                 
-                correct = self.acc_metric.compute(logits, labels)
-                batch_acc = self.acc_metric.update(correct)
-                avg_acc = self.acc_metric.accumulate()
+                batch_acc = self.acc_metric(logits, labels)
+                avg_acc = self.acc_metric.compute()
 
                 progressbar.set_postfix({
                     'batch_loss': "{:.4f}".format(loss_val),
@@ -223,7 +235,7 @@ class Trainer():
                 })
 
         logs = {}
-        logs['acc'] = self.acc_metric.accumulate()
+        logs['acc'] = self.acc_metric.compute()
         logs['loss'] = self.loss_averager.avg
         self.loss_averager.reset()
         self.acc_metric.reset()

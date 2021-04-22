@@ -34,12 +34,13 @@ class ImageDataset(Dataset):
     def __getitem__(self, idx):
         cover_img = Image.open(self.cover_path_list[idx])
         stego_img = Image.open(self.stego_path_list[idx])
-
+        
         if self.transforms:
             cover_img = self.transforms(cover_img)
             stego_img = self.transforms(stego_img)
 
         data = torch.cat([cover_img, stego_img])
+
         label = torch.tensor([0, 1], dtype=torch.int64)
 
         return data, label
