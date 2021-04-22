@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ['initialization', 'partition_parameters', 'AverageMeter', 'EarlyStopping']
+__all__ = ['initialization', 'partition_parameters', 'transfer_parameters', 'AverageMeter', 'EarlyStopping']
 
 def initialization(model: nn.Module):
     # Common practise for initialization.
@@ -32,6 +32,19 @@ def partition_parameters(model: nn.Module, weight_decay):
     param_groups = [{'params': params_wd, 'weight_decay': weight_decay},
                     {'params': params_rest}]
     return param_groups
+
+def transfer_parameters(own_model: nn.Module, checkpoint):
+    """
+    Args:
+        model: nn.Module, the model be transfered to
+        checkpoint: trained model parameters
+    """
+    own_state_dict = own_model.state_dict()
+    for k, v in checkpoint.items():
+        if k in own_state_dict:
+            if own_state_dict[k].shape == v.shape:
+                own_state_dict[k] = v
+    own_model.load_state_dict(own_state_dict)
 
 class AverageMeter(object):
     def __init__(self):

@@ -1,14 +1,15 @@
 import os
 import sys
+from pathlib import Path
 from pprint import pprint
 
 import torch
 import torch.nn as nn
-
 from loguru import logger
 from tqdm import tqdm
 
 from src.utils import AverageMeter, EarlyStopping
+
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 class Trainer():
@@ -49,7 +50,12 @@ class Trainer():
 
     def print_config(self, input_size=(40, 1024, 1, 30)):   # (BCHW) for CNN, (B, seq_len, dim_size) for RNN
         self.logger.info('Current experiment configuration:')
-        self.logger.info(pprint(self.args))
+        all_args = self.args
+        all_args['save_dir'] = self.save_dir
+        all_args['resume'] = self.resume
+        all_args['max_epoch'] = self.max_epoch
+        all_args['early_stopping'] = True if self.early_stopping else False
+        self.logger.info(pprint(all_args))
         # self.logger.info('-'*30)
         # self.logger.info('Model info:')
         # self.logger.info(paddle.summary(self.model, input_size))
@@ -69,6 +75,8 @@ class Trainer():
             N, C, H, W = data.shape
             data = data.reshape(N*C, 1, H, W).to(device)
             labels = labels.reshape(-1).to(device)
+            # data = data.to(device)
+            # labels = labels.to(device)
             self.log_writer.add_image('train/image_per_step', data[1].cpu().numpy(), step, dataformats="CHW")
 
             # forward part
@@ -110,6 +118,8 @@ class Trainer():
                 N, C, H, W = data.shape
                 data = data.reshape(N*C, 1, H, W).to(device)
                 labels = labels.reshape(-1).to(device)
+                # data = data.to(device)
+                # labels = labels.to(device)
                 # forward part
                 logits = self.model(data)
                 loss = self.loss_fn(logits, labels)
@@ -163,22 +173,32 @@ class Trainer():
             self.logger.info('')
 
     def save_checkpoint(self, acc):
-        mid = 'latest'
+        latest_path = Path(self.save_dir) / 'latest'
+        best_path = Path(self.save_dir) / 'best'
+        latest_path.mkdir(parents=True, exist_ok=True)
+        best_path.mkdir(parents=True, exist_ok=True)
+        is_best = False
         if acc > self.best_acc:
             self.best_acc = acc
             self.best_epoch = self.epoch
-            mid = 'best'
+            is_best = True
 
-        checkpoint = {
+        kwargs = {
             'epoch': self.epoch,
             'step': self.step,
             'acc': acc,
             'best_epoch': self.best_epoch,
             'best_acc': self.best_acc,
         }
-        torch.save(self.model.state_dict(), os.path.join(self.save_dir, mid, 'checkpoint.ptparams'))
-        torch.save(self.optimizer.state_dict(), os.path.join(self.save_dir, mid, 'checkpoint.ptopt'))
-        torch.save(checkpoint, os.path.join(self.save_dir, mid, 'kwargs.pt'))
+        torch.save(self.model.state_dict(), latest_path / 'checkpoint.ptparams')
+        torch.save(self.optimizer.state_dict(), latest_path / 'checkpoint.ptopt')
+        torch.save(kwargs, latest_path / 'kwargs.pt')
+
+        if is_best:
+            torch.save(self.model.state_dict(), best_path / 'checkpoint.ptparams')
+            torch.save(self.optimizer.state_dict(), best_path / 'checkpoint.ptopt')
+            torch.save(kwargs, best_path / 'kwargs.pt')
+
         self.logger.info('save checkpoint at {}'.format(os.path.abspath(self.save_dir)))
 
     def load_checkpoint(self, type_='latest'):
@@ -186,11 +206,12 @@ class Trainer():
         Args:
             type_: str, one of in (best, latest)
         """
+        path = Path(self.save_dir) / type_
         self.logger.info('==> Resume training...')
-        self.logger.info('load checkpoint at {}\n'.format(os.path.abspath(os.path.join(self.save_dir, type_))))
-        self.model.load_state_dict(torch.load(os.path.join(self.save_dir, type_, 'checkpoint.ptparams')))
-        self.optimizer.load_state_dict(torch.load(os.path.join(self.save_dir, type_, 'checkpoint.ptopt')))
-        checkpoint = torch.load(os.path.join(self.save_dir, type_, 'kwargs.pt'))
+        self.logger.info('load checkpoint at {}\n'.format(os.path.abspath(str(path))))
+        self.model.load_state_dict(torch.load(path / 'checkpoint.ptparams'))
+        self.optimizer.load_state_dict(torch.load(path / 'checkpoint.ptopt'))
+        checkpoint = torch.load(path / 'kwargs.pt')
 
         self.epoch = checkpoint['epoch'] + 1
         self.step = checkpoint['step'] + 1

@@ -4,9 +4,9 @@ dataset_path: # make sure the last dir contains all covers, and the others are s
   - data/bb_suniward_0.4
   - data/cover
 
-save_dir: experiment/1
-log_dir: experiment/1
-log_filename: 1.log
+save_dir: experiment/2
+log_dir: experiment/2
+log_filename: 2.log
 seed: 2021
 early_stopping: false
 batch_size: 32
