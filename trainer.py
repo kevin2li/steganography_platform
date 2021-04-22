@@ -9,7 +9,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from src.utils import AverageMeter, EarlyStopping
-
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 class Trainer():
     def __init__(
@@ -67,8 +67,10 @@ class Trainer():
         for step, (data, labels) in progressbar:
             # preprocess
             N, C, H, W = data.shape
-            data = data.reshape(N*C, 1, H, W)
-            labels = labels.reshape(-1)
+            data = data.reshape(N*C, 1, H, W).to(device)
+            labels = labels.reshape(-1).to(device)
+            self.log_writer.add_image('train/image_per_step', data[1].cpu().numpy(), step, dataformats="CHW")
+
             # forward part
             logits = self.model(data)
             loss = self.loss_fn(logits, labels)
@@ -106,8 +108,8 @@ class Trainer():
             for step, (data, labels) in progressbar:
                 # preprocess
                 N, C, H, W = data.shape
-                data = data.reshape(N*C, 1, H, W)
-                labels = labels.reshape(-1)
+                data = data.reshape(N*C, 1, H, W).to(device)
+                labels = labels.reshape(-1).to(device)
                 # forward part
                 logits = self.model(data)
                 loss = self.loss_fn(logits, labels)
@@ -115,10 +117,11 @@ class Trainer():
                 # record part
                 loss_val = loss.item()
                 self.loss_averager.update(loss_val)
-                
-                correct = self.acc_metric.compute(logits, labels)
-                batch_acc = self.acc_metric.update(correct)
-                avg_acc = self.acc_metric.accumulate()
+                self.log_writer.add_scalar('train/loss_per_step', loss_val, self.step)
+
+                batch_acc = self.acc_metric(logits, labels)
+                avg_acc = self.acc_metric.compute()
+                self.log_writer.add_scalar('train/acc_per_step', batch_acc, self.step)
 
                 progressbar.set_postfix({
                     'batch_loss': "{:.4f}".format(loss_val),
@@ -127,7 +130,7 @@ class Trainer():
                 })
 
         logs = {}
-        logs['acc'] = self.acc_metric.accumulate()
+        logs['acc'] = self.acc_metric.compute()
         logs['loss'] = self.loss_averager.avg
         self.loss_averager.reset()
         self.acc_metric.reset()
@@ -202,8 +205,8 @@ class Trainer():
             for step, (data, labels) in progressbar:
                 # preprocess
                 N, C, H, W = data.shape
-                data = data.reshape(N*C, 1, H, W)
-                labels = labels.reshape(-1)
+                data = data.reshape(N*C, 1, H, W).to(device)
+                labels = labels.reshape(-1).to(device)
                 # forward part
                 logits = self.model(data)
                 loss = self.loss_fn(logits, labels)
@@ -212,9 +215,8 @@ class Trainer():
                 loss_val = loss.numpy().item()
                 self.loss_averager.update(loss_val)
                 
-                correct = self.acc_metric.compute(logits, labels)
-                batch_acc = self.acc_metric.update(correct)
-                avg_acc = self.acc_metric.accumulate()
+                batch_acc = self.acc_metric(logits, labels)
+                avg_acc = self.acc_metric.compute()
 
                 progressbar.set_postfix({
                     'batch_loss': "{:.4f}".format(loss_val),
@@ -223,7 +225,7 @@ class Trainer():
                 })
 
         logs = {}
-        logs['acc'] = self.acc_metric.accumulate()
+        logs['acc'] = self.acc_metric.compute()
         logs['loss'] = self.loss_averager.avg
         self.loss_averager.reset()
         self.acc_metric.reset()

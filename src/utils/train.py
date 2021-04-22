@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 __all__ = ['initialization', 'partition_parameters', 'AverageMeter', 'EarlyStopping']
+
 def initialization(model: nn.Module):
     # Common practise for initialization.
     for layer in model.modules():
