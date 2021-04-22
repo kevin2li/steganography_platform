@@ -169,11 +169,14 @@ class Trainer():
             self.logger.info('')
 
     def save_checkpoint(self, acc):
-        mid = 'latest'
+        latest_path = Path(self.save_dir) / 'latest'
+        best_path = Path(self.save_dir) / 'best'
+        latest_path.mkdir(parents=True, exist_ok=True)
+        best_path.mkdir(parents=True, exist_ok=True)
+
         if acc > self.best_acc:
             self.best_acc = acc
             self.best_epoch = self.epoch
-            mid = 'best'
 
         kwargs = {
             'epoch': self.epoch,
@@ -182,12 +185,15 @@ class Trainer():
             'best_epoch': self.best_epoch,
             'best_acc': self.best_acc,
         }
-        path = Path(self.save_dir) / mid
-        if not path.exists():
-            path.mkdir(parents=True, exist_ok=True)
-        torch.save(self.model.state_dict(), path / 'checkpoint.ptparams')
-        torch.save(self.optimizer.state_dict(), path / 'checkpoint.ptopt')
-        torch.save(kwargs, path / 'kwargs.pt')
+        torch.save(self.model.state_dict(), latest_path / 'checkpoint.ptparams')
+        torch.save(self.optimizer.state_dict(), latest_path / 'checkpoint.ptopt')
+        torch.save(kwargs, latest_path / 'kwargs.pt')
+
+        if acc > self.best_acc:
+            torch.save(self.model.state_dict(), best_path / 'checkpoint.ptparams')
+            torch.save(self.optimizer.state_dict(), best_path / 'checkpoint.ptopt')
+            torch.save(kwargs, best_path / 'kwargs.pt')
+
         self.logger.info('save checkpoint at {}'.format(os.path.abspath(self.save_dir)))
 
     def load_checkpoint(self, type_='latest'):
