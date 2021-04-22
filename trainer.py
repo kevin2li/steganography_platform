@@ -75,6 +75,8 @@ class Trainer():
             N, C, H, W = data.shape
             data = data.reshape(N*C, 1, H, W).to(device)
             labels = labels.reshape(-1).to(device)
+            # data = data.to(device)
+            # labels = labels.to(device)
             self.log_writer.add_image('train/image_per_step', data[1].cpu().numpy(), step, dataformats="CHW")
 
             # forward part
@@ -116,6 +118,8 @@ class Trainer():
                 N, C, H, W = data.shape
                 data = data.reshape(N*C, 1, H, W).to(device)
                 labels = labels.reshape(-1).to(device)
+                # data = data.to(device)
+                # labels = labels.to(device)
                 # forward part
                 logits = self.model(data)
                 loss = self.loss_fn(logits, labels)
@@ -173,10 +177,11 @@ class Trainer():
         best_path = Path(self.save_dir) / 'best'
         latest_path.mkdir(parents=True, exist_ok=True)
         best_path.mkdir(parents=True, exist_ok=True)
-
+        is_best = False
         if acc > self.best_acc:
             self.best_acc = acc
             self.best_epoch = self.epoch
+            is_best = True
 
         kwargs = {
             'epoch': self.epoch,
@@ -189,7 +194,7 @@ class Trainer():
         torch.save(self.optimizer.state_dict(), latest_path / 'checkpoint.ptopt')
         torch.save(kwargs, latest_path / 'kwargs.pt')
 
-        if acc > self.best_acc:
+        if is_best:
             torch.save(self.model.state_dict(), best_path / 'checkpoint.ptparams')
             torch.save(self.optimizer.state_dict(), best_path / 'checkpoint.ptopt')
             torch.save(kwargs, best_path / 'kwargs.pt')

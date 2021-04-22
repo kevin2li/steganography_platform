@@ -8,7 +8,7 @@ from .dataset import ImageDataset
 __all__ = ['ImageDataset', 'getDataLoader']
 
 train_transforms = T.Compose([
-    T.RandomHorizontalFlip(),
+    # T.RandomHorizontalFlip(),
     T.ToTensor(),
 ])
 
