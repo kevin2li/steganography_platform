@@ -4,11 +4,12 @@ import torch.optim as optim
 import torchmetrics
 from src.utils import initialization, partition_parameters
 from icecream import ic
-from . import yednet, zhunet
+from . import yednet, zhunet, xunet
 from .yednet import *
 from .zhunet import *
+from .xunet import *
 
-__all__ = ['ZhuNet', 'YedNet']
+__all__ = ['ZhuNet', 'YedNet', 'XuNet']
 
 # class ZhuNet(ZhuNet, pl.LightningModule):
 #     def __init__(self, loss_fn):

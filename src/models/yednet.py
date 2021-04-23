@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from src.utils import ABS, TLU, SRM, SPP
+from src.utils import ABS, TLU, HPF, SPPLayer
 
 __all__ = ['YedNet']
 
-class YedNet(nn.ModuleDict):
+class YedNet(nn.Module):
     def __init__(self):
         super(YedNet, self).__init__()
-        self.srm = SRM()
+        self.hpf = HPF()
         self.group1 = nn.Sequential(
             nn.Conv2d(30, 30, 5, 1, 2),
             ABS(),
@@ -48,12 +48,11 @@ class YedNet(nn.ModuleDict):
         )
 
     def forward(self, x):
-        x = self.srm(x)
+        x = self.hpf(x)
         x = self.group1(x)
         x = self.group2(x)
         x = self.group3(x)
         x = self.group4(x)
         x = self.group5(x)
-        x = x.squeeze()
         out = self.classfier(x)
         return out

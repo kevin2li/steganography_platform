@@ -1,9 +1,11 @@
 ---
 dataset_path: # make sure the last dir contains all covers, and the others are stegos
   # - data/bb_hugo_0.4
-  - data/bb_suniward_0.4
+  - data/bb_wow_0.4
+  # - data/bb_suniward_0.4
   - data/cover
 
+seed: 2021
 save_dir: experiment/2
 log_dir: experiment/2
 log_filename: 2.log
@@ -17,5 +19,7 @@ max_epoch: 100
 # milestones: [50, 100, 150]
 step_size: 40
 gamma: 0.2
+gradient_clip: true
+gradient_clip_val: 5.0
 resume: false
 ...
