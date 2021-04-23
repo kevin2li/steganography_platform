@@ -1,20 +1,15 @@
 # %%
-import torch.nn as nn
 
-from collections import OrderedDict
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchmetrics
-import torchvision.transforms as T
 from icecream import ic
-from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10
 from visualdl import LogWriter
 
 from src.config import args
 from src.datasetmgr import getDataLoader
-from src.models import YedNet, ZhuNet
+from src.models import YedNet, ZhuNet, XuNet
 from src.utils import initialization, partition_parameters, transfer_parameters
 from trainer import Trainer
 
@@ -33,9 +28,13 @@ initialization(model)
 param_groups = partition_parameters(model, args['weight_decay'])
 
 # 加载预训练模型(cifar10)
-param_path = 'experiment/1/best/checkpoint.ptparams'
-checkpoint = torch.load(param_path)
-transfer_parameters(model, checkpoint)
+# param_path = 'experiment/1/best/checkpoint.ptparams'
+# checkpoint = torch.load(param_path)
+# transfer_parameters(model, checkpoint)
+path = 'trained_model/zhunet_wow.ptparams'
+params = torch.load(path)
+model.load_state_dict(params)
+
 
 optimizer = optim.SGD(lr=args['lr'], params=param_groups)
 loss_fn = nn.CrossEntropyLoss()
@@ -47,6 +46,8 @@ train_loader, test_loader = getDataLoader(args)
 # %%
 trainer = Trainer(model, loss_fn, optimizer, log_writer, acc_metric, lr_scheduler, **args)
 trainer.print_config(input_size=(None, 1, 256, 256)) # (40, 1024, 1, 30) for cnn, (32, 30, 1024) for rnn
-trainer.fit(train_loader, test_loader)
+# trainer.fit(train_loader, test_loader)
 
+# %%
+trainer.evaluate(test_loader)
 # %%

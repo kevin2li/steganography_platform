@@ -83,6 +83,8 @@ class Trainer():
             logits = self.model(data)
             loss = self.loss_fn(logits, labels)
             loss.backward()
+            if self.args['gradient_clip']:
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['gradient_clip_val'])
             self.optimizer.step()
             self.optimizer.zero_grad()
 
@@ -233,7 +235,7 @@ class Trainer():
                 loss = self.loss_fn(logits, labels)
 
                 # record part
-                loss_val = loss.numpy().item()
+                loss_val = loss.item()
                 self.loss_averager.update(loss_val)
                 
                 batch_acc = self.acc_metric(logits, labels)
