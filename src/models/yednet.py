@@ -54,5 +54,6 @@ class YedNet(nn.Module):
         x = self.group3(x)
         x = self.group4(x)
         x = self.group5(x)
+        x = x.view(-1, 128)
         out = self.classfier(x)
         return out

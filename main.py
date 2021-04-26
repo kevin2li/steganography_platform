@@ -1,5 +1,12 @@
+'''
+Author: your name
+Date: 2021-04-23 20:33:20
+LastEditTime: 2021-04-26 13:42:23
+LastEditors: Please set LastEditors
+Description: In User Settings Edit
+FilePath: /steganography_platform_pl/main.py
+'''
 # %%
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,23 +21,12 @@ from src.utils import initialization, partition_parameters, transfer_parameters
 from trainer import Trainer
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-# transforms = T.Compose([
-#     T.ToTensor()
-# ])
-
-# train_dataset = CIFAR10(root='data', train=True, download=False, transform=transforms)
-# test_dataset = CIFAR10(root='data', train=False, download=False, transform=transforms)
-# train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4)
-# test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4)
 # %%
 model = ZhuNet().to(device)
 initialization(model)
 param_groups = partition_parameters(model, args['weight_decay'])
 
-# 加载预训练模型(cifar10)
-# param_path = 'experiment/1/best/checkpoint.ptparams'
-# checkpoint = torch.load(param_path)
-# transfer_parameters(model, checkpoint)
+# 加载预训练模型
 path = 'trained_model/zhunet_wow.ptparams'
 params = torch.load(path)
 model.load_state_dict(params)

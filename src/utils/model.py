@@ -1,3 +1,11 @@
+'''
+Author: your name
+Date: 2021-04-23 16:33:42
+LastEditTime: 2021-04-23 16:33:41
+LastEditors: Please set LastEditors
+Description: In User Settings Edit
+FilePath: /steganography_platform_pl/src/utils/model.py
+'''
 import numpy as np
 import torch
 import torch.nn as nn
@@ -56,24 +64,6 @@ class HPF(nn.Module):
         output = self.tlu(output)
 
         return output
-
-# class SRM(nn.Module):
-#     def __init__(self, is_update=False):
-#         super(SRM, self).__init__()
-#         # Load 30 SRM Filters
-#         all_hpf_list_5x5 = []
-#         for hpf_item in all_normalized_hpf_list:
-#             if hpf_item.shape[0] == 3:
-#                 hpf_item = np.pad(hpf_item, pad_width=((1, 1), (1, 1)), mode='constant')
-#             all_hpf_list_5x5.append(hpf_item)
-#         all_hpf_list_5x5 = torch.tensor(all_hpf_list_5x5).unsqueeze(1)
-#         # conv
-#         self.conv = nn.Conv2d(1, 30, 5, 1, 2, )
-#         self.conv.weight = nn.Parameter(all_hpf_list_5x5, requires_grad=False)
-
-#     def forward(self, x):
-#         out = self.conv(x)
-#         return out
 
 # https://gist.github.com/erogol/a324cc054a3cdc30e278461da9f1a05e
 class SPPLayer(nn.Module):
